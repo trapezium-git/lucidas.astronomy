@@ -23,6 +23,12 @@
     }
 
     * { box-sizing: border-box; }
+    #tutorial { width: min(520px, calc(100% - 32px)); max-height: 85vh; overflow: auto; color: var(--text); background: #101a2e; border: 1px solid #526d9e; border-radius: 22px; padding: 30px; box-shadow: var(--shadow); }
+    #tutorial::backdrop { background: rgba(3,7,16,.82); backdrop-filter: blur(6px); }
+    #tutorial h2 { font-size: 27px; margin: 16px 0; }
+    #tutorial p { color: #b4c1d5; line-height: 1.8; }
+    .tutorial-actions { display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between; margin-top:25px; }
+    #tutorial-step { color:var(--blue); font-size:12px; letter-spacing:.1em; }
     html { scroll-behavior: smooth; }
     body {
       margin: 0;
@@ -728,6 +734,7 @@
       <button data-go="community">게시판</button>
     </nav>
     <div class="header-actions">
+      <button id="tutorial-open" class="icon-button" aria-label="사용 안내 다시 보기" title="사용 안내">?</button>
       <span id="api-pill" class="api-pill loading"><i></i><span>API 연결 중</span></span>
       <button id="menu-button" class="icon-button menu-button" aria-label="메뉴 열기">☰</button>
     </div>
@@ -808,7 +815,7 @@
       <div class="page-intro">
         <p class="eyebrow">▤ OBSERVATION LOG</p>
         <h1>관측일지</h1>
-        <p>그날의 하늘, 장비, 느낌을 기록하세요.</p>
+        <p>그날의 하늘, 장비, 느낌을 기록하세요. 이 단일 HTML 버전에서는 기록이 현재 브라우저에 안전하게 보관됩니다.</p>
       </div>
       <div class="journal-layout">
         <form id="journal-form" class="journal-form glass-card">
@@ -895,12 +902,55 @@
     <span>Open-Meteo weather data · Local-first observation log</span>
   </footer>
 
+  <dialog id="tutorial" aria-labelledby="tutorial-title" aria-describedby="tutorial-description">
+    <span id="tutorial-step"></span>
+    <h2 id="tutorial-title"></h2>
+    <p id="tutorial-description"></p>
+    <p style="font-size:12px">이 파일은 브라우저 저장 방식입니다. Firebase 연결 및 기기 간 동기화는 아직 포함되지 않았습니다.</p>
+    <div class="tutorial-actions">
+      <button id="tutorial-skip" class="small-button" type="button">건너뛰기</button>
+      <button id="tutorial-back" class="small-button" type="button">이전</button>
+      <button id="tutorial-next" class="primary-button" type="button">다음 →</button>
+    </div>
+  </dialog>
   <div id="toast" class="toast" hidden>✓ 저장했습니다.</div>
 
   <script>
     (function () {
       "use strict";
 
+      var tutorialPages = [
+        ["Lucidas에 오신 것을 환영해요", "오늘의 관측 조건을 확인하고 밤하늘에서 만난 대상을 기록하는 공간입니다. 짧은 안내로 시작해 볼까요?"],
+        ["오늘의 하늘 확인하기", "날씨는 인터넷에 연결되어 있을 때 Open-Meteo에서 불러옵니다. 기본 위치는 부산이며, 현재 위치 버튼을 누르면 위치 권한을 요청합니다. 관측 점수는 참고용이고 달 밝기는 근사값입니다."],
+        ["관측일지와 사진 남기기", "관측일지에서 날짜, 장소, 대상, 장비와 메모를 입력해 저장하세요. 사진을 첨부하면 갤러리에도 표시됩니다."],
+        ["메시에 도장깨기", "관측 대상에 M13처럼 메시에 번호를 적으면 해당 천체가 완료로 표시됩니다. 메시에 카드의 관측일지 작성 버튼으로 기록을 시작할 수도 있어요."],
+        ["기록은 이 브라우저에 저장돼요", "관측일지와 게시글은 이 기기의 브라우저에만 저장됩니다. 게시판 글은 다른 사람에게 공유되지 않습니다. 브라우저 데이터를 지우면 기록과 사진이 사라질 수 있어요. JSON 내보내기는 글 기록용이며 사진은 포함하지 않습니다. 안내는 상단 ? 버튼에서 다시 열 수 있습니다."]
+      ];
+      var tutorialIndex = 0;
+      var tutorialDialog = document.getElementById("tutorial");
+      function renderTutorial() {
+        document.getElementById("tutorial-step").textContent = (tutorialIndex + 1) + " / " + tutorialPages.length;
+        document.getElementById("tutorial-title").textContent = tutorialPages[tutorialIndex][0];
+        document.getElementById("tutorial-description").textContent = tutorialPages[tutorialIndex][1];
+        document.getElementById("tutorial-back").disabled = tutorialIndex === 0;
+        document.getElementById("tutorial-next").textContent = tutorialIndex === tutorialPages.length - 1 ? "시작하기 ✦" : "다음 →";
+      }
+      function openTutorial() { tutorialIndex = 0; renderTutorial(); tutorialDialog.showModal(); }
+      function closeTutorial() { tutorialDialog.close(); }
+      document.getElementById("tutorial-open").addEventListener("click", openTutorial);
+      document.getElementById("tutorial-skip").addEventListener("click", closeTutorial);
+      document.getElementById("tutorial-back").addEventListener("click", function () { if (tutorialIndex > 0) { tutorialIndex--; renderTutorial(); } });
+      document.getElementById("tutorial-next").addEventListener("click", function () {
+        if (tutorialIndex === tutorialPages.length - 1) closeTutorial();
+        else { tutorialIndex++; renderTutorial(); }
+      });
+      tutorialDialog.addEventListener("close", function () {
+        try { localStorage.setItem("lucidas-tutorial-v1", "seen"); } catch (error) { /* storage may be unavailable */ }
+        document.getElementById("tutorial-open").focus();
+      });
+      var tutorialSeen = false;
+      try { tutorialSeen = localStorage.getItem("lucidas-tutorial-v1") === "seen"; } catch (error) { /* show tutorial */ }
+      if (!tutorialSeen) openTutorial();
       var STORAGE_ENTRIES = "lucidas-standalone-entries-v1";
       var STORAGE_POSTS = "lucidas-standalone-posts-v1";
       var currentLocation = { latitude: 35.1796, longitude: 129.0756, label: "부산" };
