@@ -808,7 +808,7 @@
       <div class="page-intro">
         <p class="eyebrow">▤ OBSERVATION LOG</p>
         <h1>관측일지</h1>
-        <p>그날의 하늘, 장비, 느낌을 기록하세요. 이 단일 HTML 버전에서는 기록이 현재 브라우저에 안전하게 보관됩니다.</p>
+        <p>그날의 하늘, 장비, 느낌을 기록하세요.</p>
       </div>
       <div class="journal-layout">
         <form id="journal-form" class="journal-form glass-card">
